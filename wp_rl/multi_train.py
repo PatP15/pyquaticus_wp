@@ -84,7 +84,6 @@ if __name__ == '__main__':
 
             
     def policy_mapping_fn(agent_id, episode, worker, **kwargs):
-        # print(agent_id)
         if agent_id == 0:
             return "attacker-multi"
         elif agent_id == 1:
@@ -92,7 +91,7 @@ if __name__ == '__main__':
         elif agent_id == 2:
             return np.random.choice(["rand-policy", "noop-policy", "easy-attack", "medium-attack", "hard-attack", "easy-combined2", "medium-combined2", "hard-combined2", "attacker-multi"])
         else:
-            return np.random.choice(["rand-policy", "noop-policy", "easy-defend", "medium-defend", "hard-defend", "easy-combined3", "medium-combined3", "hard-combined3", "defender-multi"])
+            return np.random.choice(["rand-policy1", "noop-policy1", "easy-defend", "medium-defend", "hard-defend", "easy-combined3", "medium-combined3", "hard-combined3", "defender-multi"])
     env.close()
     policies = {
         'attacker-multi':(None, obs_space, act_space, {}), 
@@ -100,6 +99,9 @@ if __name__ == '__main__':
 
         'rand-policy':(bp.RandPolicy, obs_space, act_space, {}),
         'noop-policy':(bp.NoOp, obs_space, act_space, {}),
+
+        'rand-policy1':(bp.RandPolicy, obs_space, act_space, {}),
+        'noop-policy1':(bp.NoOp, obs_space, act_space, {}),
 
         'easy-defend':(bp.DefendGen(3, Team.RED_TEAM, 'easy', 2), obs_space, act_space, {}),
         'medium-defend':(bp.DefendGen(3, Team.RED_TEAM, 'medium', 2), obs_space, act_space, {}),
@@ -118,11 +120,11 @@ if __name__ == '__main__':
         'hard-combined3':(bp.CombinedGen(3, Team.RED_TEAM, 'hard', 2), obs_space, act_space, {})
     }
 
-    
+    # ray.init()s
     #CPU training
-    ppo_config = PPOConfig().environment(env='pyquaticus').rollouts(num_rollout_workers=1).resources(num_cpus_per_worker=1, num_gpus=int(os.environ.get("RLLIB_NUM_GPUS", "0")))
+    # ppo_config = PPOConfig().environment(env='pyquaticus').rollouts(num_rollout_workers=1).resources(num_cpus_per_worker=1, num_gpus=int(os.environ.get("RLLIB_NUM_GPUS", "0")))
     #GPU training
-    # ppo_config = PPOConfig().environment(env='pyquaticus').rollouts(num_rollout_workers=5).resources( num_learner_workers=2, num_gpus_per_learner_worker = 1, num_cpus_per_worker=2, num_gpus=0.5, _fake_gpus = True )
+    ppo_config = PPOConfig().environment(env='pyquaticus').rollouts(num_rollout_workers=8).resources( num_learner_workers=1, num_gpus_per_learner_worker = 2, num_gpus_per_worker = 1/8, num_gpus=1 )
     ppo_config.multi_agent(policies=policies, \
                            policy_mapping_fn=policy_mapping_fn, \
                             policies_to_train=["attacker-multi", "defender-multi"],)
@@ -132,7 +134,7 @@ if __name__ == '__main__':
         algo.restore('./ray_wp_multi/'+str(args.checkpoint)+'/')
         # algo = Algorithm.from_checkpoint(
         #     checkpoint='./ray_wp_multi/'+str(args.checkpoint)+'/',
-        #     policy_ids={"attacker-multi", "defender-multi"},  # <- restore only those policy IDs here.
+        #     policy_ids={"attacker-multi", "defender-multi"},  # <- restore on/ly those policy IDs here.
         #     policy_mapping_fn=policy_mapping_fn,  # <- use this new mapping fn.
         # )
     s = "{:3d} reward {:6.2f}/{:6.2f}/{:6.2f} len {:6.2f} saved {}"
@@ -140,7 +142,7 @@ if __name__ == '__main__':
     while True:
         result = algo.train()
         print("Iter: " + str(i + 1))
-        if np.mod(i, 100) == 0:
+        if np.mod(i, 100) == 0 and i > 1:
             chkpt_file = algo.save('./ray_wp_multi/')
             print(s.format(
                 i + 1,
@@ -150,3 +152,4 @@ if __name__ == '__main__':
                 result["episode_len_mean"],
                 chkpt_file
             ))
+        i += 1
