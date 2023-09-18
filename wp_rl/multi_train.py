@@ -124,7 +124,7 @@ if __name__ == '__main__':
     #CPU training
     # ppo_config = PPOConfig().environment(env='pyquaticus').rollouts(num_rollout_workers=1).resources(num_cpus_per_worker=1, num_gpus=int(os.environ.get("RLLIB_NUM_GPUS", "0")))
     #GPU training
-    ppo_config = PPOConfig().environment(env='pyquaticus').rollouts(num_rollout_workers=8).resources( num_learner_workers=1, num_gpus_per_learner_worker = 2, num_gpus_per_worker = 1/8, num_gpus=1 )
+    ppo_config = PPOConfig().environment(env='pyquaticus').rollouts(num_rollout_workers=8).resources(num_gpus_per_learner_worker = 1, num_cpus_per_worker = 1, num_gpus_per_worker=1/8, num_gpus=1 )
     ppo_config.multi_agent(policies=policies, \
                            policy_mapping_fn=policy_mapping_fn, \
                             policies_to_train=["attacker-multi", "defender-multi"],)
